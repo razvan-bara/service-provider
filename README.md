@@ -1,2 +1,2 @@
 # service-provider
-The project for distribuited algorithms course
+The project for the distribuited algorithms course
