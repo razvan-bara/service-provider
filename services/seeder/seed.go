@@ -1,4 +1,4 @@
-package seed
+package seeder
 
 import (
 	"encoding/csv"
@@ -17,8 +17,8 @@ const (
 )
 
 var (
-	inputFile          = fmt.Sprintf("%s/%s", directoryName, "input.csv")
-	columnNames        = []string{"Name", "PAJ", "DA", "PP", "MDS", "SGSC", "IBD", "BT"}
+	inputFile   = fmt.Sprintf("%s/%s", directoryName, "input.csv")
+	columnNames = []string{"Name", "PAJ", "DA", "PP", "MDS", "SGSC", "IBD", "BT"}
 )
 
 func init() {
