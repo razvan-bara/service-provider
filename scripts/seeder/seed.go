@@ -7,6 +7,7 @@ import (
 	"math/rand"
 	"os"
 	"strconv"
+	"sync"
 )
 
 type gradesCSV struct {
@@ -42,32 +43,41 @@ func init() {
 }
 
 func GenerateCSV() error {
+	var wg sync.WaitGroup
+	errChan := make(chan error)
 
 	for _, file := range files {
+		wg.Add(1)
+		go func(name string, rows int64) {
+			defer wg.Done()
 
-		inputFile, err := os.Create(file.name)
-		if err != nil {
-			return err
-		}
-		defer inputFile.Close()
-
-		writer := csv.NewWriter(inputFile)
-		writer.Write(columnNames)
-		writer.Flush()
-
-		studentLen := int64(len(students))
-		for i := int64(0); i < file.rows; i++ {
-			name := students[rand.Int63n(studentLen)]
-			err := writer.Write(append([]string{name}, generateGrades()...))
+			inputFile, err := os.Create(name)
 			if err != nil {
-				log.Printf("Failed to write data for student %s, got err: %v\n", name, err)
+				errChan <- err
+				return
+			}
+			defer inputFile.Close()
+
+			writer := csv.NewWriter(inputFile)
+			writer.Write(columnNames)
+			writer.Flush()
+
+			studentLen := int64(len(students))
+			for i := int64(0); i < rows; i++ {
+				name := students[rand.Int63n(studentLen)]
+				err := writer.Write(append([]string{name}, generateGrades()...))
+				if err != nil {
+					log.Printf("Failed to write data for student %s, got err: %v\n", name, err)
+				}
+
+				writer.Flush()
 			}
 
-			writer.Flush()
-		}
+		}(file.name, file.rows)
 
 	}
 
+	wg.Wait()
 	return nil
 }
 
