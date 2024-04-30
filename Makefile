@@ -1,5 +1,5 @@
 run:
-	go run ./services/worker/service/main.go
+	go run ./services/scheduler/service/
 
 seed:
 	go run ./scripts/seeder/
