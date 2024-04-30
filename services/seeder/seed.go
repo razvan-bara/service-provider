@@ -1,4 +1,4 @@
-package seeder
+package main
 
 import (
 	"encoding/csv"

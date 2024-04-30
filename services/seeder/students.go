@@ -1,4 +1,4 @@
-package seeder
+package main
 
 var studentsWithGrades = map[string][]string{
 	"Abir Batres":             generateGrades(),
