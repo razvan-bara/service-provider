@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+package pbWorker;
+
+option go_package = "./gen/pbWorker";
+
+service WorkerService {
+    rpc DoWork(WorkRequest) returns (WorkResponse);
+}
+
+message WorkRequest {
+    string test = 1;
+}
+
+message WorkResponse {
+    string test = 1;
+}
