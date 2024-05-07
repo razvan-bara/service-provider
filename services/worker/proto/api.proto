@@ -5,7 +5,7 @@ package pbWorker;
 option go_package = "./gen/pbWorker";
 
 service WorkerService {
-    rpc ComputeGPA(stream ComputeGPARequest) returns (ComputeGPAResponse);
+    rpc ComputeGPA(stream ComputeGPARequest) returns (stream ComputeGPAResponse);
 }
 
 message ComputeGPARequest {
@@ -33,5 +33,10 @@ enum CourseName {
 }
 
 message ComputeGPAResponse {
-    string test = 1;
+    repeated StudentWithGPA studentsWithGPA = 1;
+}
+
+message StudentWithGPA {
+    string studentName = 1;
+    double GPA = 2;
 }

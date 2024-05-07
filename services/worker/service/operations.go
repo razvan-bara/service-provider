@@ -1,84 +1,30 @@
 package main
 
-// const (
-// 	numberOfCourses = 7
-// )
+import (
+	"math"
+	pb "service-provider/services/worker/proto"
+	"strconv"
+)
 
-// func computeGPAForStudents(students []types.StudentRequestRow) ([]*types.StudentResponseRow, error) {
+const (
+	numberOfCourses = 7
+)
 
-// 	studentsOrderedByGPA := make([]*types.StudentResponseRow, len(students))
+func computeGPA(student *pb.StudentWithGrades) (*pb.StudentWithGPA, error) {
+	var sum int
 
-// 	for i := 0; i < len(students); i++ {
-// 		gpa, err := computeGPA(students[i])
-// 		if err != nil {
-// 			return nil, err
-// 		}
-// 		studentsOrderedByGPA[i] = &types.StudentResponseRow{
-// 			Name: students[i].Name,
-// 			GPA:  gpa,
-// 		}
-// 	}
+	for _, grade := range student.Grades {
+		x, err := strconv.Atoi(grade.Score)
+		if err != nil {
+			return nil, err
+		}
+		sum += x
 
-// 	sort.Slice(studentsOrderedByGPA, func(i, j int) bool {
-// 		return studentsOrderedByGPA[i].GPA > studentsOrderedByGPA[j].GPA
-// 	})
+	}
 
-// 	return studentsOrderedByGPA, nil
-// }
-
-// func computeGPA(student types.StudentRequestRow) (float64, error) {
-// 	var sum int
-// 	x, err := convertGradeToInt(student.PAJ)
-// 	if err != nil {
-// 		return 0, err
-// 	}
-// 	sum += x
-
-// 	x, err = convertGradeToInt(student.BT)
-// 	if err != nil {
-// 		return 0, err
-// 	}
-// 	sum += x
-
-// 	x, err = convertGradeToInt(student.PP)
-// 	if err != nil {
-// 		return 0, err
-// 	}
-// 	sum += x
-
-// 	x, err = convertGradeToInt(student.DA)
-// 	if err != nil {
-// 		return 0, err
-// 	}
-// 	sum += x
-
-// 	x, err = convertGradeToInt(student.MDS)
-// 	if err != nil {
-// 		return 0, err
-// 	}
-// 	sum += x
-
-// 	x, err = convertGradeToInt(student.SGSC)
-// 	if err != nil {
-// 		return 0, err
-// 	}
-// 	sum += x
-
-// 	x, err = convertGradeToInt(student.IBD)
-// 	if err != nil {
-// 		return 0, err
-// 	}
-// 	sum += x
-
-// 	res := float64(sum) / numberOfCourses
-// 	return res, nil
-// }
-
-// func convertGradeToInt(grade string) (int, error) {
-// 	x, err := strconv.Atoi(grade)
-// 	if err != nil {
-// 		return 0, errors.New("could not convert grade to int")
-// 	}
-
-// 	return x, nil
-// }
+	res := float64(sum) / numberOfCourses
+	return &pb.StudentWithGPA{
+		StudentName: student.StudentName,
+		GPA:         math.Floor(res*100) / 100,
+	}, nil
+}

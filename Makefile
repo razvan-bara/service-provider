@@ -4,6 +4,9 @@ scheduler:
 worker:
 	go run ./services/worker/service/
 
+start:
+	make worker & make scheduler
+
 seed:
 	go run ./scripts/seeder/
 

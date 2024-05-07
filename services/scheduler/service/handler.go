@@ -12,10 +12,6 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// const (
-// 	payloadRowLimit = 10
-// )
-
 type SchedulerHandler struct {
 	workerService pbWorker.WorkerServiceClient
 }
@@ -73,17 +69,45 @@ func (service *SchedulerHandler) handleCSVRequest(c *gin.Context) {
 		return
 	}
 
-	computeGPAClient.Send(&pbWorker.ComputeGPARequest{
-		StudentsWithGrades: studentsWithGrades[:100],
-	})
+	waitc := make(chan struct{})
+	students := make([]*pbWorker.StudentWithGPA, 0)
+	go func() {
+		for {
+			gpaResp, err := computeGPAClient.Recv()
+			if err == io.EOF {
+				close(waitc)
+				return
+			}
+			if err != nil {
+				log.Fatalf("Got error while computing GPA: %v", err)
+			}
+			students = append(students, gpaResp.StudentsWithGPA...)
+		}
+	}()
 
-	reply, err := computeGPAClient.CloseAndRecv()
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
+	j := 0
+	batchSize := 150
+	for i := 0; i < len(studentsWithGrades); i += batchSize {
+
+		j = i + batchSize
+		if j > len(studentsWithGrades) {
+			j = len(studentsWithGrades)
+		}
+
+		batch := studentsWithGrades[i:j]
+		computeGPAReq := &pbWorker.ComputeGPARequest{
+			StudentsWithGrades: batch,
+		}
+		if err := computeGPAClient.Send(computeGPAReq); err != nil {
+			log.Fatalf("Failed to send a batch of students to compute GPA: %v", err)
+		}
+
 	}
+	computeGPAClient.CloseSend()
+	<-waitc
+
 	c.JSON(http.StatusOK, gin.H{
-		"hello": reply.Test,
+		"studentsWithGPA": students,
 	})
 }
 
