@@ -5,13 +5,33 @@ package pbWorker;
 option go_package = "./gen/pbWorker";
 
 service WorkerService {
-    rpc DoWork(WorkRequest) returns (WorkResponse);
+    rpc ComputeGPA(ComputeGPARequest) returns (ComputeGPAResponse);
 }
 
-message WorkRequest {
-    string test = 1;
+message ComputeGPARequest {
+    repeated StudentWithGrades studentsWithGrades = 1;
 }
 
-message WorkResponse {
+message StudentWithGrades {
+    string studentName = 1;
+    repeated Grade grades = 2;
+}
+
+message Grade {
+    CourseName courseId = 1;
+    string score = 2;
+}
+
+enum CourseName {
+ PAJ=0;
+ DA=1;
+ PP=2;
+ MDS=3;
+ SGSC=4;
+ IBD=5;
+ BT=6;
+}
+
+message ComputeGPAResponse {
     string test = 1;
 }
