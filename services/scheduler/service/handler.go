@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/csv"
 	"io"
 	"log"
@@ -66,18 +67,23 @@ func (service *SchedulerHandler) handleCSVRequest(c *gin.Context) {
 	}
 	log.Println("Count of records in the file: ", cnt)
 
-	computeGPAReq := &pbWorker.ComputeGPARequest{
-		StudentsWithGrades: studentsWithGrades,
-	}
-
-	_, err = service.workerService.ComputeGPA(c, computeGPAReq)
+	computeGPAClient, err := service.workerService.ComputeGPA(context.Background())
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err})
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
+	computeGPAClient.Send(&pbWorker.ComputeGPARequest{
+		StudentsWithGrades: studentsWithGrades[:100],
+	})
+
+	reply, err := computeGPAClient.CloseAndRecv()
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
 	c.JSON(http.StatusOK, gin.H{
-		"hello": "got request",
+		"hello": reply.Test,
 	})
 }
 
@@ -108,6 +114,10 @@ func addStudentWithGrades(record []string) *pbWorker.StudentWithGrades {
 			{
 				CourseId: 6,
 				Score:    record[6],
+			},
+			{
+				CourseId: 7,
+				Score:    record[7],
 			},
 		},
 	}
