@@ -1,2 +1,4 @@
 generated/*
 services/*/proto/*.pb.go
+services/*/*.mod
+services/*/*.sum

@@ -10,7 +10,7 @@ import (
 
 func main() {
 
-	conn, err := grpc.Dial("localhost:8081", grpc.WithInsecure())
+	conn, err := grpc.Dial("localhost:8083", grpc.WithInsecure())
 	if err != nil {
 		log.Fatalln("Failed to dial GRPC server, got err: ", err)
 	}
