@@ -23,13 +23,13 @@ dockerWorker:
 	docker build -t worker -f services/worker/Dockerfile --no-cache  --progress=plain . 
 
 firstWorker:
-	docker run --name first -p 8081:8081 -e PORT="8081"  worker 
+	docker run --name first -p 8081:8081 -e PORT="8081" -d  worker 
 
 secondWorker:
-	docker run --name second -p 8082:8082 -e PORT="8082"  worker 
+	docker run --name second -p 8082:8082 -e PORT="8082" -d  worker 
 
 thirdWorker:
-	docker run --name third -p 8083:8083 -e PORT="8083"  worker 
+	docker run --name third -p 8083:8083 -e PORT="8083" -d  worker 
 
 buildWorker:
 	go build -C services/worker/service -o ../out/app
