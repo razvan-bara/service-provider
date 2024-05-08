@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"encoding/csv"
 	"io"
 	"log"
@@ -13,7 +12,7 @@ import (
 )
 
 type SchedulerHandler struct {
-	workerService pbWorker.WorkerServiceClient
+	Scheduler *Scheduler
 }
 
 type Form struct {
@@ -63,48 +62,58 @@ func (service *SchedulerHandler) handleCSVRequest(c *gin.Context) {
 	}
 	log.Println("Count of records in the file: ", cnt)
 
-	computeGPAClient, err := service.workerService.ComputeGPA(context.Background())
+	scheduler := service.Scheduler
+	students, err := scheduler.distribuiteComputeGPAWork(studentsWithGrades)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	waitc := make(chan struct{})
-	students := make([]*pbWorker.StudentWithGPA, 0)
-	go func() {
-		for {
-			gpaResp, err := computeGPAClient.Recv()
-			if err == io.EOF {
-				close(waitc)
-				return
-			}
-			if err != nil {
-				log.Fatalf("Got error while computing GPA: %v", err)
-			}
-			students = append(students, gpaResp.StudentsWithGPA...)
-		}
-	}()
+	c.JSON(http.StatusOK, gin.H{
+		"studentsWithGPA": students,
+	})
+	// computeGPAClient, err := scheduler.Clients[0].ComputeGPA(context.Background())
+	// if err != nil {
+	// 	c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	// 	return
+	// }
 
-	j := 0
-	batchSize := 150
-	for i := 0; i < len(studentsWithGrades); i += batchSize {
+	// waitc := make(chan struct{})
+	// students := make([]*pbWorker.StudentWithGPA, 0)
+	// go func() {
+	// 	for {
+	// 		gpaResp, err := computeGPAClient.Recv()
+	// 		if err == io.EOF {
+	// 			close(waitc)
+	// 			return
+	// 		}
+	// 		if err != nil {
+	// 			log.Fatalf("Got error while computing GPA: %v", err)
+	// 		}
+	// 		students = append(students, gpaResp.StudentsWithGPA...)
+	// 	}
+	// }()
 
-		j = i + batchSize
-		if j > len(studentsWithGrades) {
-			j = len(studentsWithGrades)
-		}
+	// j := 0
+	// batchSize := 150
+	// for i := 0; i < len(studentsWithGrades); i += batchSize {
 
-		batch := studentsWithGrades[i:j]
-		computeGPAReq := &pbWorker.ComputeGPARequest{
-			StudentsWithGrades: batch,
-		}
-		if err := computeGPAClient.Send(computeGPAReq); err != nil {
-			log.Fatalf("Failed to send a batch of students to compute GPA: %v", err)
-		}
+	// 	j = i + batchSize
+	// 	if j > len(studentsWithGrades) {
+	// 		j = len(studentsWithGrades)
+	// 	}
 
-	}
-	computeGPAClient.CloseSend()
-	<-waitc
+	// 	batch := studentsWithGrades[i:j]
+	// 	computeGPAReq := &pbWorker.ComputeGPARequest{
+	// 		StudentsWithGrades: batch,
+	// 	}
+	// 	if err := computeGPAClient.Send(computeGPAReq); err != nil {
+	// 		log.Fatalf("Failed to send a batch of students to compute GPA: %v", err)
+	// 	}
+
+	// }
+	// computeGPAClient.CloseSend()
+	// <-waitc
 
 	c.JSON(http.StatusOK, gin.H{
 		"studentsWithGPA": students,
