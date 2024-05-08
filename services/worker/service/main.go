@@ -19,7 +19,9 @@ func main() {
 		log.Fatalf("failed to listen: %v", err)
 	}
 
-	grpcServer := grpc.NewServer()
+	grpcServer := grpc.NewServer(
+		grpc.StreamInterceptor(StreamInterceptor()),
+	)
 
 	pbWorker.RegisterWorkerServiceServer(grpcServer, NewWorkerService())
 	log.Println("Worker service started on port ", port)

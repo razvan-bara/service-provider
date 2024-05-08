@@ -2,7 +2,7 @@ scheduler:
 	go run ./services/scheduler/service/
 
 worker:
-	go run ./services/worker/service/
+	PORT=8081 go run ./services/worker/service/ 
 
 start:
 	make worker & make scheduler

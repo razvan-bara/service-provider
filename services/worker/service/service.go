@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"io"
 	"log"
 	pb "service-provider/services/worker/proto"
@@ -58,4 +59,14 @@ func (service *WorkerService) ComputeGPA(stream pb.WorkerService_ComputeGPAServe
 		}
 	}
 
+}
+
+func (service *WorkerService) GetStatus(ctx context.Context, req *pb.GetStatusRequest) (*pb.GetStatusResponse, error) {
+	if serviceLoad > 10 {
+		return &pb.GetStatusResponse{
+			IsBusy: true,
+		}, nil
+
+	}
+	return &pb.GetStatusResponse{}, nil
 }
