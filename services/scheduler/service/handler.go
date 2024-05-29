@@ -9,10 +9,12 @@ import (
 	pbWorker "service-provider/services/worker/proto"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 )
 
 type SchedulerHandler struct {
 	Scheduler *Scheduler
+	TaskDB    *TaskDB
 }
 
 type Form struct {
@@ -62,16 +64,26 @@ func (service *SchedulerHandler) handleCSVRequest(c *gin.Context) {
 	}
 	log.Println("Count of records in the file: ", cnt)
 
-	scheduler := service.Scheduler
-	students, err := scheduler.distribuiteComputeGPAWork(studentsWithGrades)
+	requestId := uuid.New().String()
+	err = service.TaskDB.InsertRow(requestId, studentsWithGrades)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error trying to insert row"})
 		return
 	}
 
+	log.Println("Inserted a new task into the queue")
 	c.JSON(http.StatusOK, gin.H{
-		"studentsWithGPA": students,
+		"ok":        true,
+		"requestId": requestId,
 	})
+
+	// scheduler := service.Scheduler
+	// students, err := scheduler.roundRobinDistributeComputeGPAWork(studentsWithGrades)
+	// if err != nil {
+	// 	c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	// 	return
+	// }
+
 	// computeGPAClient, err := scheduler.Clients[0].ComputeGPA(context.Background())
 	// if err != nil {
 	// 	c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -115,9 +127,9 @@ func (service *SchedulerHandler) handleCSVRequest(c *gin.Context) {
 	// computeGPAClient.CloseSend()
 	// <-waitc
 
-	c.JSON(http.StatusOK, gin.H{
-		"studentsWithGPA": students,
-	})
+	// c.JSON(http.StatusOK, gin.H{
+	// 	"studentsWithGPA": students,
+	// })
 }
 
 func addStudentWithGrades(record []string) *pbWorker.StudentWithGrades {

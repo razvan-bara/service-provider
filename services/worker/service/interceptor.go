@@ -17,6 +17,7 @@ var (
 func (e *EdgeServerStream) RecvMsg(m interface{}) error {
 	// should do some calculation per stream here
 	if err := e.ServerStream.RecvMsg(m); err != nil {
+		serviceLoad--
 		return err
 	}
 	return nil
@@ -25,7 +26,10 @@ func (e *EdgeServerStream) RecvMsg(m interface{}) error {
 func StreamInterceptor() grpc.StreamServerInterceptor {
 	return func(srv interface{}, ss grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
 		serviceLoad++
+		wrapper := &EdgeServerStream{
+			ServerStream: ss,
+		}
 		log.Printf("Service load: %d\n", serviceLoad)
-		return handler(srv, ss)
+		return handler(srv, wrapper)
 	}
 }
