@@ -39,21 +39,23 @@ func (scheduler *Scheduler) ListenForTasks() {
 		}
 
 		for _, task := range tasks {
-			var studentsWithGrades []*pbWorker.StudentWithGrades
-			err := json.Unmarshal(task.Payload, &studentsWithGrades)
-			if err != nil {
-				log.Fatal("failed to unmarshal task payload: ", err)
-			}
-			// Compute the GPA for the students
-			studentWithGPA, err := scheduler.distributeRoundRobin(studentsWithGrades)
-			if err != nil {
-				log.Println("Couldn't compute GPA for students: ", err)
-			} else {
-				err = scheduler.TaskDB.UpdateRow(task, studentWithGPA)
+			go func() {
+				var studentsWithGrades []*pbWorker.StudentWithGrades
+				err := json.Unmarshal(task.Payload, &studentsWithGrades)
 				if err != nil {
-					log.Println("Couldn't update the task status: ", err)
+					log.Fatal("failed to unmarshal task payload: ", err)
 				}
-			}
+				// Compute the GPA for the students
+				studentWithGPA, err := scheduler.distributeRoundRobin(studentsWithGrades)
+				if err != nil {
+					log.Println("Couldn't compute GPA for students: ", err)
+				} else {
+					err = scheduler.TaskDB.UpdateRow(task, studentWithGPA)
+					if err != nil {
+						log.Println("Couldn't update the task status: ", err)
+					}
+				}
+			}()
 
 		}
 		time.Sleep(1 * time.Second)
