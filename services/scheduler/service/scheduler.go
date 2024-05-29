@@ -48,12 +48,13 @@ func (scheduler *Scheduler) ListenForTasks() {
 			studentWithGPA, err := scheduler.distributeRoundRobin(studentsWithGrades)
 			if err != nil {
 				log.Println("Couldn't compute GPA for students: ", err)
+			} else {
+				err = scheduler.TaskDB.UpdateRow(task, studentWithGPA)
+				if err != nil {
+					log.Println("Couldn't update the task status: ", err)
+				}
 			}
 
-			err = scheduler.TaskDB.UpdateRow(task, studentWithGPA)
-			if err != nil {
-				log.Println("Couldn't update the task status: ", err)
-			}
 		}
 		time.Sleep(1 * time.Second)
 	}
@@ -62,17 +63,25 @@ func (scheduler *Scheduler) ListenForTasks() {
 func (scheduler *Scheduler) distributeRoundRobin(studentsWithGrades []*pbWorker.StudentWithGrades) ([]*pbWorker.StudentWithGPA, error) {
 	log.Println("Distributing workload in round robin fashion")
 
-	workerClient := scheduler.decideClient()
-
-	stdudentsWithGPA, err := scheduler.computeGPARoundRobin(workerClient, studentsWithGrades)
+	workerClient, cc, err := scheduler.decideClient()
 	if err != nil {
 		return nil, err
 	}
 
+	load := len(studentsWithGrades) / 100
+	cc.Load += load
+	log.Println("Load: ", cc.Load)
+	stdudentsWithGPA, err := scheduler.computeGPARoundRobin(workerClient, studentsWithGrades)
+	if err != nil {
+		cc.Load -= load
+		return nil, err
+	}
+	cc.Load -= load
+
 	return stdudentsWithGPA, nil
 }
 
-func (scheduler *Scheduler) decideClient() pbWorker.WorkerServiceClient {
+func (scheduler *Scheduler) decideClient() (pbWorker.WorkerServiceClient, *ClientConnection, error) {
 	// Implement the logic to decide which client to us
 	minLoad, chosenPort := 9999, ""
 	for port, tmpCC := range scheduler.ClientConnections {
@@ -87,8 +96,13 @@ func (scheduler *Scheduler) decideClient() pbWorker.WorkerServiceClient {
 
 	}
 
+	if chosenPort == "" {
+		return nil, nil, fmt.Errorf("no worker client available")
+	}
+
+	log.Println("Chosen port: ", chosenPort)
 	cc := scheduler.ClientConnections[chosenPort]
-	return cc.Client
+	return cc.Client, cc, nil
 }
 
 func isSmaller(x, y int) bool {
@@ -176,18 +190,17 @@ func (scheduler *Scheduler) CheckWorkerHeartbeats() {
 			}
 
 			_, err = pbWorkerClinet.GetStatus(context.Background(), &pbWorker.GetStatusRequest{})
-
-			if err != nil {
+			heartbeat := scheduler.ClientConnections[port].HasHeartbeat
+			if err != nil && heartbeat {
 				log.Println("Failed to get heartbeat from worker client on port: ", port)
-				continue
+				heartbeat = false
+
+			} else if err == nil && !heartbeat {
+				log.Println("Got heartbeat for worker client on port: ", port)
+				heartbeat = true
 			}
 
-			log.Println("Got heartbeat for worker client on port: ", port)
-			scheduler.ClientConnections[port] = &ClientConnection{
-				Conn:         conn,
-				Client:       pbWorkerClinet,
-				HasHeartbeat: true,
-			}
+			scheduler.ClientConnections[port].HasHeartbeat = heartbeat
 		}
 		time.Sleep(700 * time.Millisecond)
 	}

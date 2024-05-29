@@ -76,60 +76,6 @@ func (service *SchedulerHandler) handleCSVRequest(c *gin.Context) {
 		"ok":        true,
 		"requestId": requestId,
 	})
-
-	// scheduler := service.Scheduler
-	// students, err := scheduler.roundRobinDistributeComputeGPAWork(studentsWithGrades)
-	// if err != nil {
-	// 	c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-	// 	return
-	// }
-
-	// computeGPAClient, err := scheduler.Clients[0].ComputeGPA(context.Background())
-	// if err != nil {
-	// 	c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-	// 	return
-	// }
-
-	// waitc := make(chan struct{})
-	// students := make([]*pbWorker.StudentWithGPA, 0)
-	// go func() {
-	// 	for {
-	// 		gpaResp, err := computeGPAClient.Recv()
-	// 		if err == io.EOF {
-	// 			close(waitc)
-	// 			return
-	// 		}
-	// 		if err != nil {
-	// 			log.Fatalf("Got error while computing GPA: %v", err)
-	// 		}
-	// 		students = append(students, gpaResp.StudentsWithGPA...)
-	// 	}
-	// }()
-
-	// j := 0
-	// batchSize := 150
-	// for i := 0; i < len(studentsWithGrades); i += batchSize {
-
-	// 	j = i + batchSize
-	// 	if j > len(studentsWithGrades) {
-	// 		j = len(studentsWithGrades)
-	// 	}
-
-	// 	batch := studentsWithGrades[i:j]
-	// 	computeGPAReq := &pbWorker.ComputeGPARequest{
-	// 		StudentsWithGrades: batch,
-	// 	}
-	// 	if err := computeGPAClient.Send(computeGPAReq); err != nil {
-	// 		log.Fatalf("Failed to send a batch of students to compute GPA: %v", err)
-	// 	}
-
-	// }
-	// computeGPAClient.CloseSend()
-	// <-waitc
-
-	// c.JSON(http.StatusOK, gin.H{
-	// 	"studentsWithGPA": students,
-	// })
 }
 
 func addStudentWithGrades(record []string) *pbWorker.StudentWithGrades {

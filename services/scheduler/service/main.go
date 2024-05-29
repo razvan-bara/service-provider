@@ -52,13 +52,13 @@ func main() {
 	log.Println("Connecting to the worker servers... Please wait")
 
 	clientConnections := map[string]*ClientConnection{}
+	timeoutDuration := 15 * time.Second
+	ctx, cancelFunc := context.WithTimeout(context.Background(), timeoutDuration)
+	mutex := &sync.Mutex{}
 	for i := 1; i <= 3; i++ {
 		go func(i int) {
 			waitForWorker := make(chan struct{})
 			port := fmt.Sprintf("808%d", i)
-
-			timeoutDuration := 15 * time.Second
-			ctx, cancelFunc := context.WithTimeout(context.Background(), timeoutDuration)
 
 			go func(ctx context.Context) {
 				for {
@@ -88,16 +88,24 @@ func main() {
 
 							_, err = pbWorkerClinet.GetStatus(context.Background(), &pbWorker.GetStatusRequest{})
 							if err != nil {
-								time.Sleep(1 * time.Second)
+								mutex.Lock()
+								clientConnections[port] = &ClientConnection{
+									Conn:         conn,
+									Client:       pbWorkerClinet,
+									HasHeartbeat: false,
+								}
+								mutex.Unlock()
 								continue
 							}
 
-							log.Println("Successfully connected to the worker server on port: ", port)
+							log.Println("Connected to the worker server on port: ", port)
+							mutex.Lock()
 							clientConnections[port] = &ClientConnection{
 								Conn:         conn,
 								Client:       pbWorkerClinet,
 								HasHeartbeat: true,
 							}
+							mutex.Unlock()
 							waitForWorker <- struct{}{}
 							return
 						}
@@ -109,16 +117,17 @@ func main() {
 			case <-waitForWorker:
 				once.Do(onceBody)
 			case <-time.After(timeoutDuration):
-				cancelFunc()
-				return
+
 			}
+			cancelFunc()
 		}(i)
 	}
 
 	select {
 	case <-waitForAtLeastOneWorkerChan:
+
 		break
-	case <-time.After(15 * time.Second):
+	case <-time.After(timeoutDuration):
 		log.Fatal("Failed to connect to any worker client, exiting...")
 	}
 
@@ -137,14 +146,11 @@ func main() {
 	go scheduler.ListenForTasks()
 	go scheduler.CheckWorkerHeartbeats()
 
-	go func() {
-		var router = gin.Default()
+	var router = gin.Default()
 
-		router.GET("/ping", handler.getHealth)
-		router.POST("/file", handler.handleCSVRequest)
+	router.GET("/ping", handler.getHealth)
+	router.POST("/file", handler.handleCSVRequest)
 
-		router.Run() // listen and serve on 0.0.0.0:8080
-	}()
+	router.Run() // listen and serve on 0.0.0.0:8080
 
-	select {}
 }
