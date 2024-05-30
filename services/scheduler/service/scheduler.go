@@ -33,12 +33,15 @@ func (scheduler *Scheduler) ListenForTasks() {
 		log.Println("Listening for tasks...")
 
 		// Iterate through the tasks from the queue
-		tasks, err := scheduler.TaskDB.SelectPendingTasks()
-		if err != nil {
-			log.Panicf("failed when getting tasks, err: %v\n", err)
-		}
+		taskChan := make(chan *Task)
+		go func() {
+			_, err := scheduler.TaskDB.SelectPendingTasks(taskChan)
+			if err != nil {
+				log.Panicf("failed when getting tasks, err: %v\n", err)
+			}
+		}()
 
-		for _, task := range tasks {
+		for task := range taskChan {
 			go func() {
 				var studentsWithGrades []*pbWorker.StudentWithGrades
 				err := json.Unmarshal(task.Payload, &studentsWithGrades)
@@ -56,7 +59,6 @@ func (scheduler *Scheduler) ListenForTasks() {
 					}
 				}
 			}()
-
 		}
 		time.Sleep(1 * time.Second)
 	}

@@ -58,7 +58,7 @@ func (taskDB *TaskDB) InsertRow(requestId string, studentsWithGrades []*pbWorker
 	return nil
 }
 
-func (taskDB *TaskDB) SelectPendingTasks() ([]*Task, error) {
+func (taskDB *TaskDB) SelectPendingTasks(taskChan chan *Task) ([]*Task, error) {
 	queryTasksSQL := `SELECT id, task_name, payload, students_with_gpa, status, created_at, updated_at FROM queue WHERE status = $1`
 	rows, err := taskDB.db.Query(queryTasksSQL, "pending")
 	if err != nil {
@@ -74,9 +74,10 @@ func (taskDB *TaskDB) SelectPendingTasks() ([]*Task, error) {
 			rows.Close()
 			log.Fatal(err)
 		}
-
+		taskChan <- task
 		tasks = append(tasks, task)
 	}
+	close(taskChan)
 
 	return tasks, nil
 }
